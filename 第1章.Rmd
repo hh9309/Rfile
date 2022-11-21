@@ -1,0 +1,87 @@
+---
+title: "第1章"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+a = read.csv("../案例数据/第1章.csv",header=T)
+names(a) = c("Y", "X1", "X2", "X3")
+a[c(1:5),]
+
+N = sapply(a,length)
+MU = sapply(a,mean)
+SD = sapply(a,sd)
+MIN = sapply(a,min)
+MED = sapply(a,median)
+MAX = sapply(a,max)
+result = cbind(N,MU,SD,MIN,MED,MAX)
+result
+
+par(mfrow = c(2,2))
+hist(a$Y, xlab = "间接价值", ylab = "频数",main=NULL)
+hist(a$X1, xlab = "通话时长（百分钟）", ylab = "频数",main=NULL)
+hist(a$X2, xlab = "大网占比（%）", ylab = "频数",main=NULL)
+hist(a$X3, xlab = "小网占比（%）", ylab = "频数",main=NULL)
+
+
+a$cat = as.factor((a$Y > median(a$Y))*1)
+levels(a$cat) = c("低","高")
+a$cat = factor(a$cat,levels=c("高","低"))
+par(mfrow = c(1,3))
+boxplot(X1~cat,data=a,xlab="间接价值", ylab="通话时长（百分钟）")
+boxplot(X2~cat,data=a,xlab="间接价值", ylab="大网占比（%）")
+boxplot(X3~cat,data=a,xlab="间接价值", ylab="小网占比（%）")
+
+fit = lm(Y~X1+X2+X3, data = a)
+summary(fit)
+
+nsimu = 1000					
+ss = length(a[,1])
+ss0 = round(ss*0.8)
+R2 = rep(0,nsimu)
+for(i in 1:nsimu){
+  a = a[order(runif(ss)),]
+  a0 = a[c(1:ss0),]
+  a1 = a[-c(1:ss0),]
+  fit0 = lm(Y~X1+X2+X3, data=a0)
+  Y.hat = predict(fit0, a1)
+  Y.true = a1$Y
+  sse = sum((Y.hat-Y.true)^2)
+  sst = sum((Y.true-mean(Y.true))^2)
+  R2[i] = (1-sse/sst)*100
+}
+par(mfrow = c(1,1))
+boxplot(R2)
+
+library(car)
+vif(fit)
+
+plot(fit,which = 4)
+
+
+plot(fit, which = 1)
+
+
+x = rnorm(1000)
+y = x + rnorm(1000)
+y[10] = y[10] - 30
+myfit = lm(y~x)
+plot(myfit, which = 1)
+
+model.aic = step(fit, trace=F)
+model.bic = step(fit, k=log(ss), trace=F)
+summary(model.bic)
+
+#人群细分
+library(dplyr)
+a$X1_new = (a$X1 < median(a$X1))*1
+a$X2_new = (a$X2 < median(a$X2))*1
+table(a$X2_new,a$X1_new)/nrow(a)
+a$X2_new %>% table
+table(a$X2_new,a$X1_new)
+```
